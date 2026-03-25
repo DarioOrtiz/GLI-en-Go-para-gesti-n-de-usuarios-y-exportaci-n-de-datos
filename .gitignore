@@ -1,0 +1,5 @@
+*.exe
+*.out
+users_*.json
+users_*.csv
+.DS_Store
