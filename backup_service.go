@@ -1,30 +1,24 @@
 package services
 
 import (
-	"fmt"
-	"os"
-	"time"
+    "fmt"
+    "os"
+    "time"
 )
 
 func BackupUsers() {
-	srcFile := "users.json"
-	if _, err := os.Stat(srcFile); os.IsNotExist(err) {
-		fmt.Println("No se encontró el archivo", srcFile)
-		return
-	}
+    fileName := "users.json"
+    f, err := os.Create(fileName)
+    if err != nil {
+        fmt.Println("Error creando users.json:", err)
+        return
+    }
+    defer f.Close()
 
-	input, err := os.ReadFile(srcFile)
-	if err != nil {
-		fmt.Println("Error leyendo archivo:", err)
-		return
-	}
+    json.NewEncoder(f).Encode(Users)
 
-	dstFile := fmt.Sprintf("backup_users_%d.json", time.Now().Unix())
-	err = os.WriteFile(dstFile, input, 0644)
-	if err != nil {
-		fmt.Println("Error creando backup:", err)
-		return
-	}
-
-	fmt.Println("Backup creado en", dstFile)
+    backupFile := fmt.Sprintf("backup_users_%d.json", time.Now().Unix())
+    input, _ := os.ReadFile(fileName)
+    os.WriteFile(backupFile, input, 0644)
+    fmt.Println("Backup creado en", backupFile)
 }
