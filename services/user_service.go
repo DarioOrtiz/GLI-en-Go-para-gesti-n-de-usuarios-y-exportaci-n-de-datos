@@ -16,7 +16,7 @@ type User struct {
 	Email string `json:"email"`
 }
 
-// ExportDataFiltered exporta los usuarios, opcionalmente filtrando por dominio
+
 func ExportDataFiltered(format string, domainFilter string) {
 	users := getUsersFromDB(domainFilter)
 
@@ -45,7 +45,6 @@ func ExportDataFiltered(format string, domainFilter string) {
 	}
 }
 
-// ListUsers lista usuarios desde DB
 func ListUsers() {
 	users := getUsersFromDB("")
 	fmt.Println("Listado de usuarios:")
@@ -54,7 +53,6 @@ func ListUsers() {
 	}
 }
 
-// getUsersFromDB lee usuarios desde SQLite
 func getUsersFromDB(domain string) []User {
 	db, _ := sql.Open("sqlite3", "./data/users.db")
 	defer db.Close()
