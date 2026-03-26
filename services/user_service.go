@@ -1,49 +1,80 @@
 package services
 
 import (
-    "encoding/csv"
-    "encoding/json"
-    "fmt"
-    "os"
-    "time"
+	"database/sql"
+	"encoding/csv"
+	"encoding/json"
+	"fmt"
+	"os"
+	"time"
+
+	_ "github.com/mattn/go-sqlite3"
 )
 
-var Users = []map[string]string{
-    {"name": "Alice", "email": "alice@example.com"},
-    {"name": "Bob", "email": "bob@biz.com"},
-    {"name": "Charlie", "email": "charlie@biz.com"},
-    {"name": "David", "email": "david@biz.com"},
-    {"name": "Eva", "email": "eva@company.org"},
-    {"name": "Frank", "email": "frank@biz.com"},
+type User struct {
+	Name  string `json:"name"`
+	Email string `json:"email"`
 }
 
+// ExportDataFiltered exporta los usuarios, opcionalmente filtrando por dominio
+func ExportDataFiltered(format string, domainFilter string) {
+	users := getUsersFromDB(domainFilter)
+
+	switch format {
+	case "json":
+		fileName := fmt.Sprintf("users_%d.json", time.Now().Unix())
+		f, _ := os.Create(fileName)
+		defer f.Close()
+		json.NewEncoder(f).Encode(users)
+		fmt.Println("Datos exportados a", fileName)
+
+	case "csv":
+		fileName := fmt.Sprintf("users_%d.csv", time.Now().Unix())
+		f, _ := os.Create(fileName)
+		defer f.Close()
+		w := csv.NewWriter(f)
+		w.Write([]string{"name", "email"})
+		for _, u := range users {
+			w.Write([]string{u.Name, u.Email})
+		}
+		w.Flush()
+		fmt.Println("Datos exportados a", fileName)
+
+	default:
+		fmt.Println("Formato no soportado:", format)
+	}
+}
+
+// ListUsers lista usuarios desde DB
 func ListUsers() {
-    fmt.Println("Listado de usuarios:")
-    for _, u := range Users {
-        fmt.Printf("- %s (%s)\n", u["name"], u["email"])
-    }
+	users := getUsersFromDB("")
+	fmt.Println("Listado de usuarios:")
+	for _, u := range users {
+		fmt.Printf("- %s (%s)\n", u.Name, u.Email)
+	}
 }
 
-func ExportData(format string) {
-    switch format {
-    case "json":
-        fileName := fmt.Sprintf("users_%d.json", time.Now().Unix())
-        f, _ := os.Create(fileName)
-        defer f.Close()
-        json.NewEncoder(f).Encode(Users)
-        fmt.Println("Datos exportados a", fileName)
-    case "csv":
-        fileName := fmt.Sprintf("users_%d.csv", time.Now().Unix())
-        f, _ := os.Create(fileName)
-        defer f.Close()
-        w := csv.NewWriter(f)
-        w.Write([]string{"name", "email"})
-        for _, u := range Users {
-            w.Write([]string{u["name"], u["email"]})
-        }
-        w.Flush()
-        fmt.Println("Datos exportados a", fileName)
-    default:
-        fmt.Println("Formato no soportado:", format)
-    }
+// getUsersFromDB lee usuarios desde SQLite
+func getUsersFromDB(domain string) []User {
+	db, _ := sql.Open("sqlite3", "./data/users.db")
+	defer db.Close()
+
+	query := "SELECT name, email FROM users"
+	if domain != "" {
+		query += " WHERE email LIKE ?"
+		rows, _ := db.Query(query, "%"+domain)
+		return scanUsers(rows)
+	}
+	rows, _ := db.Query(query)
+	return scanUsers(rows)
+}
+
+func scanUsers(rows *sql.Rows) []User {
+	var users []User
+	for rows.Next() {
+		var u User
+		rows.Scan(&u.Name, &u.Email)
+		users = append(users, u)
+	}
+	return users
 }
